@@ -1,94 +1,329 @@
-Python backend, Redis cache, and React frontend, here's a Low-Level Design (LLD) based on your functional requirements and high-level architecture:
+Low Level Design (LLD) for Parking Lot System
 
-🚧 1. System Overview (LLD)
-Backend: Python (Flask/FastAPI)
+Technology Stack:
 
-Frontend: React
+Backend: Python (FastAPI or Flask)
 
-Cache: Redis (for slot availability, session, ticket info)
+Frontend: React.js
 
-Database: (optional) PostgreSQL/MongoDB if persistent storage is needed
+Cache: Redis
 
-📦 2. Modules & Key Components
-Backend (Python)
-Models
+Database: PostgreSQL
 
-Vehicle (type, license)
+1. Entities and Data Models (PostgreSQL)
 
-User (id, name, role: admin/attendant/customer)
+1.1 User
 
-ParkingSpot (id, type, floor, is_occupied)
+Field
 
-Ticket (ticket_id, vehicle, entry_time, exit_time, spot_id, amount)
+Type
 
-Payment (amount, status, mode, timestamp)
+Description
 
-Services
+id
 
-ParkingService (assign/release spots, generate tickets)
+UUID (PK)
 
-PricingService (calculate hourly/daily fees)
+Unique user ID
 
-RedisService (read/write cache: availability, tickets)
+name
 
-UserAuthService (if login required)
+TEXT
 
-Controllers (REST APIs)
+Full name
 
-POST /entry → Generate ticket
+email
 
-POST /exit → Close ticket, calculate fees
+TEXT
 
-GET /spots → Get available slots
+Unique email address
 
-GET /dashboard → Admin: View parked vehicles
+password_hash
 
-GET /ticket/:id → Ticket details
+TEXT
 
-Redis Cache Keys
+Hashed password
 
-slot:{type} → List of available spots
+role
 
-ticket:{id} → Ticket data
+ENUM
 
-user:{id} → Session info (if login involved)
+[Admin, Attendant, Customer]
 
-Frontend (React)
-Pages/Views
+1.2 Vehicle
 
-Home Page: Park/Unpark forms
+Field
 
-Dashboard: View current tickets (admin/attendant)
+Type
 
-Slot Viewer: Live view of available spots
+Description
 
-Pricing Page: Info on pricing model
+id
 
-Login Page: If role-based access is needed
+UUID (PK)
 
-State Management
+Vehicle ID
 
-Use React Context/Redux for user sessions and cache ticket data
+license_plate
 
-API Calls
+TEXT
 
-Axios/Fetch to backend endpoints
+Unique license plate
 
-WebSocket (optional) for real-time slot updates
+vehicle_type
 
-🔄 4. Redis Use Cases
-Fast lookups of spot availability (slot:bike, slot:car)
+ENUM
 
-Store active tickets (ticket:abc123)
+[Car, Bike, Truck]
 
-Cache dashboard data for admins
+user_id
 
-Reduce DB hits on frequent entry/exit
+UUID (FK)
 
+Owner (customer)
 
+1.3 ParkingSpot
 
+Field
 
+Type
 
+Description
 
+id
 
+UUID (PK)
 
+Spot ID
+
+spot_type
+
+ENUM
+
+[Car, Bike, Truck]
+
+floor
+
+INT
+
+Floor number
+
+is_occupied
+
+BOOLEAN
+
+Whether the spot is in use
+
+1.4 Ticket
+
+Field
+
+Type
+
+Description
+
+id
+
+UUID (PK)
+
+Ticket ID
+
+vehicle_id
+
+UUID (FK)
+
+Associated vehicle
+
+spot_id
+
+UUID (FK)
+
+Assigned parking spot
+
+entry_time
+
+TIMESTAMP
+
+Entry timestamp
+
+exit_time
+
+TIMESTAMP
+
+Exit timestamp (nullable)
+
+status
+
+ENUM
+
+[Active, Closed]
+
+amount
+
+NUMERIC
+
+Calculated parking fee (nullable)
+
+1.5 Payment
+
+Field
+
+Type
+
+Description
+
+id
+
+UUID (PK)
+
+Payment ID
+
+ticket_id
+
+UUID (FK)
+
+Related ticket
+
+amount
+
+NUMERIC
+
+Amount paid
+
+method
+
+TEXT
+
+Payment method (Cash/Card)
+
+status
+
+ENUM
+
+[Paid, Failed]
+
+timestamp
+
+TIMESTAMP
+
+Payment time
+
+2. Redis Cache Design
+
+available_spots:{vehicle_type}: Set of available spot IDs per vehicle type
+
+ticket:{ticket_id}: Cached active ticket details
+
+dashboard:active_tickets: Cached list of active tickets (periodic update)
+
+user_session:{user_id}: Session/token data (if auth enabled)
+
+3. Backend API Endpoints
+
+3.1 Authentication
+
+POST /login: User login → returns token
+
+POST /register: Register new customer
+
+3.2 Parking Actions
+
+POST /entry: Vehicle entry → assigns spot, creates ticket
+
+POST /exit: Vehicle exit → calculates price, updates ticket
+
+GET /ticket/{id}: View ticket details
+
+3.3 Admin / Attendant Functions
+
+GET /dashboard: View all active tickets
+
+GET /spots: View current spot availability
+
+POST /spots: Add/update parking spots
+
+GET /users: Admin access to list users (optional)
+
+4. Frontend Components (React.js)
+
+Pages
+
+Login/Register Page: User authentication
+
+Home Page: Vehicle entry/exit forms
+
+Dashboard: Admin/attendant view of current active tickets
+
+Availability Page: Live spot status
+
+Pricing Info Page: View rates per vehicle type
+
+Components
+
+VehicleEntryForm
+
+VehicleExitForm
+
+SpotStatusTable
+
+TicketSummary
+
+DashboardTable
+
+State Handling
+
+Axios for API communication
+
+React Context or Redux for session/ticket state
+
+5. Business Logic
+
+Pricing Strategy
+
+Hourly rates:
+
+Bike: $5/hr
+
+Car: $10/hr
+
+Truck: $20/hr
+
+Grace period: 15 minutes (free)
+
+Slot Assignment Logic
+
+Check Redis set available_spots:{type}
+
+Allocate first available spot
+
+Update Redis & DB for occupancy
+
+Exit Logic
+
+Fetch ticket from Redis → fallback to DB
+
+Calculate duration & price
+
+Update ticket, free up spot
+
+Store payment record
+
+6. Security & Authentication
+
+Use JWT tokens for login sessions
+
+Bcrypt for password hashing
+
+Role-based access control for Admin, Attendant, Customer
+
+7. Future Enhancements
+
+Real-time WebSocket updates for dashboards
+
+QR code on ticket for scan-exit
+
+Rate limit on entry/exit API
+
+Audit logs for admin actions
+
+This LLD provides a foundation for building your full-featured parking lot system with Python, Redis, PostgreSQL, and React.
